@@ -1,90 +1,39 @@
-# Task Management Service
+# Task Management API
 
-A RESTful task management service built with **Kotlin**, **Spring Boot**, **Reactor**, and **JdbcClient** using native SQL queries. The service implements a reactive architecture with proper layered separation (Controller → Service → Repository).
+RESTful task management service built with Kotlin, Spring Boot, and reactive programming.
 
-## 🚀 Features
+## Features
 
-- **Create tasks** with title and description
-- **Retrieve tasks** by ID or list with pagination and filtering
-- **Update task status** (NEW → IN_PROGRESS → DONE → CANCELLED)
-- **Delete tasks** by ID
-- **Reactive programming** with Mono/Flux throughout the service layer
-- **Native SQL** queries with JdbcClient (no ORM)
-- **Comprehensive validation** and error handling
-- **Unit tests** for all layers with high coverage
+- Create, read, update, delete tasks
+- Pagination and filtering
+- Task status management (NEW → IN_PROGRESS → DONE → CANCELLED)
+- Reactive programming with Mono/Flux
+- Native SQL queries with JdbcClient
+- Input validation and error handling
 
-## 🛠 Tech Stack
+## Tech Stack
 
-- **Kotlin** - Primary language
-- **Spring Boot 3.2.0** - Framework
-- **Spring WebFlux** - Reactive web framework
-- **Project Reactor** - Reactive streams (Mono/Flux)
-- **JdbcClient** - Database access with native SQL
-- **H2 Database** - In-memory database for development
-- **Jakarta Validation** - Request validation
-- **JUnit 5** - Testing framework
-- **MockK** - Mocking for Kotlin
+- Kotlin
+- Spring Boot 3.2.0
+- Spring WebFlux (reactive)
+- Project Reactor (Mono/Flux)
+- JdbcClient with native SQL
+- H2 Database (in-memory)
+- Jakarta Validation
+- JUnit 5 + MockK
 
-## 📁 Project Structure
+## Quick Start
 
-```
-src/main/kotlin/com/taskmanagement/
-├── controller/          # REST endpoints
-├── service/            # Business logic (reactive)
-├── repository/         # Data access (JdbcClient + SQL)
-├── model/              # Domain entities
-├── dto/                # Request/Response DTOs
-└── exception/          # Error handling
+### Prerequisites
+- Java 17+
 
-src/test/kotlin/com/taskmanagement/
-├── controller/         # Controller unit tests
-├── service/           # Service unit tests
-├── repository/        # Repository integration tests
-└── TaskManagementApplicationTests.kt
-```
-
-## 🏗 Architecture
-
-The service follows a clean layered architecture with reactive programming:
-
-```
-Controller (HTTP) → Service (Reactive) → Repository (JDBC) → Database
-                         ↓
-                 Global Exception Handler
-```
-
-**Key Design Principles:**
-- **Reactive Service Layer**: All service methods return `Mono<T>` or `Flux<T>`
-- **Native SQL**: Repository uses JdbcClient with hand-written SQL queries
-- **DTO Separation**: Clear separation between API contracts and domain models
-- **Validation**: Input validation with Jakarta Bean Validation
-- **Error Handling**: Centralized exception handling with proper HTTP status codes
-
-## ⚙️ How to Run
-
-### 1. Prerequisites
-- Java 21 or higher
-- No additional setup required (uses embedded H2 database)
-
-### 2. Build the Project
-```bash
-./gradlew clean build -x test
-```
-
-### 3. Run the Application
+### Run
 ```bash
 ./gradlew bootRun
 ```
+Application starts at http://localhost:8080
 
-The service will start on **http://localhost:8080**
-
-### 4. Access H2 Console (Optional)
-- URL: http://localhost:8080/h2-console
-- JDBC URL: `jdbc:h2:mem:taskdb`
-- Username: `sa`
-- Password: (empty)
-
-## 📌 API Endpoints
+## API Endpoints
 
 ### Create Task
 ```http
@@ -155,146 +104,20 @@ DELETE /api/tasks/1
 ```
 **Response: 204 No Content**
 
-## 🧪 Testing
+## Testing
 
-### Run All Tests
+Run tests:
 ```bash
 ./gradlew test
 ```
 
-### Test Coverage
-The project includes comprehensive tests:
+## Task Status Values
+- `NEW` - Initial status
+- `IN_PROGRESS` - Being worked on  
+- `DONE` - Completed
+- `CANCELLED` - Cancelled
 
-- **Service Tests**: Mock repository, test reactive flows
-- **Controller Tests**: Test HTTP endpoints, validation, status codes
-- **Repository Tests**: Integration tests with H2 database
-- **Error Scenarios**: 404 Not Found, validation errors, etc.
-
-### Manual API Testing
-
-Use the provided `test-api.http` file with your IDE's HTTP client, or use curl:
-
-```bash
-# Create a task
-curl -X POST http://localhost:8080/api/tasks \
-  -H "Content-Type: application/json" \
-  -d '{"title":"Test Task","description":"Testing the API"}'
-
-# Get all tasks
-curl "http://localhost:8080/api/tasks?page=0&size=10"
-
-# Get task by ID
-curl http://localhost:8080/api/tasks/1
-
-# Update status
-curl -X PATCH http://localhost:8080/api/tasks/1/status \
-  -H "Content-Type: application/json" \
-  -d '{"status":"DONE"}'
-
-# Delete task
-curl -X DELETE http://localhost:8080/api/tasks/1
-```
-
-## 🔧 Configuration
-
-### Database Configuration (application.yml)
-```yaml
-spring:
-  datasource:
-    url: jdbc:h2:mem:taskdb
-    username: sa
-    password: 
-    driver-class-name: org.h2.Driver
-```
-
-### Task Status Values
-- `NEW` - Initial status for new tasks
-- `IN_PROGRESS` - Task is being worked on
-- `DONE` - Task completed successfully
-- `CANCELLED` - Task was cancelled
-
-## ✅ Validation Rules
-
-- **Title**: Required, 3-100 characters
-- **Description**: Optional
-- **Status**: Must be valid enum value
-
-## 🚨 Error Handling
-
-The service provides consistent error responses:
-
-**404 Not Found:**
-```json
-{
-  "message": "Task not found with id: 999"
-}
-```
-
-**400 Bad Request (Validation):**
-```json
-{
-  "message": "Validation failed: title: Title must be between 3 and 100 characters"
-}
-```
-
-## 🎯 Key Implementation Details
-
-### Reactive Service Layer
-All service methods use Project Reactor:
-```kotlin
-fun createTask(request: TaskRequest): Mono<TaskResponse>
-fun getTaskById(id: Long): Mono<TaskResponse>
-fun getTasks(page: Int, size: Int, status: TaskStatus?): Mono<PageResponse<TaskResponse>>
-```
-
-### Native SQL with JdbcClient
-```kotlin
-fun findAll(page: Int, size: Int, status: TaskStatus?): List<Task> {
-    val sql = """
-        SELECT * FROM tasks 
-        WHERE status = :status 
-        ORDER BY created_at DESC 
-        LIMIT :size OFFSET :offset
-    """
-    return jdbcClient.sql(sql)
-        .param("status", status?.name)
-        .param("size", size)
-        .param("offset", page * size)
-        .query { rs, _ -> mapRowToTask(rs) }
-        .list()
-}
-```
-
-### Reactive Error Handling
-```kotlin
-fun getTaskById(id: Long): Mono<TaskResponse> {
-    return Mono.fromCallable {
-        taskRepository.findById(id)
-            ?: throw TaskNotFoundException("Task not found with id: $id")
-    }
-    .map { mapToResponse(it) }
-    .subscribeOn(Schedulers.boundedElastic())
-}
-```
-
-## 📈 Performance Considerations
-
-- **Reactive Streams**: Non-blocking I/O with Reactor
-- **Connection Pooling**: HikariCP for database connections
-- **Pagination**: Efficient LIMIT/OFFSET queries
-- **Bounded Elastic Scheduler**: For blocking database operations
-
-## 🔄 Future Enhancements
-
-- Add Redis caching for frequently accessed tasks
-- Implement task assignment to users
-- Add task priorities and due dates
-- Implement audit logging
-- Add metrics and monitoring
-- Database migrations with Flyway
-
----
-
-**Author**: Task Management Service  
-**License**: MIT  
-**Version**: 1.0.0
+## Validation Rules
+- Title: Required, 3-100 characters
+- Description: Optional
+- Status: Valid enum value

@@ -1,187 +1,238 @@
-# 📝 Task Management REST API
+# 🔄 Workflow Orchestrator API
 
-A production-style RESTful API built with **Spring Boot + Kotlin** for managing tasks.  
-This project demonstrates clean architecture, CRUD operations, pagination, DTO mapping, and global exception handling.
-
----
-
-# 🚀 Features
-
-- Create task
-- Get task by ID
-- Get all tasks (pagination + optional status filter)
-- Update task status
-- Delete task
-- DTO-based request/response structure
-- Global exception handling (404, 400, 500)
-- Clean layered architecture
+A hexagonal architecture-based RESTful service built with **Spring Boot + Kotlin** for orchestrating workflow items.  
+This project demonstrates ports-adapters pattern, domain-driven design, pagination, contract mapping, and centralized error handling.
 
 ---
 
-# 🛠 Tech Stack
+# ⚡ Capabilities
+
+- Initiate workflow item
+- Locate workflow item by identifier
+- Enumerate all workflow items (pagination + optional phase filter)
+- Transition workflow item phase
+- Eliminate workflow item
+- Contract-based request/response structure
+- Centralized exception handling (404, 400, 500)
+- Hexagonal architecture implementation
+
+---
+
+# 🛠 Technology Stack
 
 - Kotlin
 - Spring Boot
 - Spring Web
-- Spring JDBC / JPA (depending on setup)
-- H2 Database (default) or PostgreSQL
+- Spring JDBC
+- H2 Database (in-memory) or PostgreSQL
 - Gradle
 
 ---
 
-# 📁 Project Structure
+# 📁 Architecture Structure
 
-com.example.demo
+io.nexus.orchestrator
 │
-├── controller # REST controllers
-├── service # Business logic layer
-├── repository # Database access layer
-├── model # Entity classes
-├── dto # Request / Response DTOs
-├── mapper # Entity ↔ DTO conversion
-├── exception # Global exception handling
-├── common # API response wrapper (optional)
+├── domain
+│   ├── entities # Core business entities
+│   ├── ports # Repository interfaces
+│   └── services # Business logic layer
+├── application
+│   ├── contracts # Request/Response contracts
+│   └── transformers # Entity ↔ Contract conversion
+└── infrastructure
+    ├── web # REST endpoints
+    ├── persistence # Database adapters
+    └── exceptions # Error handling
 
 ---
 
-# ⚙️ Setup & Run
-
+# ⚙️ Setup & Execution
 
 ```bash
 1. Clone repository
 git clone <your-repo-url>
-cd demo 
-
+cd workflow-orchestrator
 
 2. Build project
 ./gradlew clean build
 
-
-3. Run application
+3. Execute application
 ./gradlew bootRun
+```
 
-Server runs at:
-
-http://localhost:8080
-
-📌 API ENDPOINTS
-
-📍 Create Task
-Request
-POST /api/tasks
-{
-  "title": "My Task",
-  "description": "Task description"
-}
-Response
-{
-  "success": true,
-  "data": {
-    "id": 1,
-    "title": "My Task",
-    "description": "Task description",
-    "status": "TODO",
-    "createdAt": "2026-03-28T20:00:00",
-    "updatedAt": "2026-03-28T20:00:00"
-  },
-  "error": null
-}
-📍 Get Task by ID
-Request
-GET /api/tasks/{id}
-Response (success)
-{
-  "success": true,
-  "data": {
-    "id": 1,
-    "title": "My Task",
-    "description": "Task description",
-    "status": "TODO",
-    "createdAt": "2026-03-28T20:00:00",
-    "updatedAt": "2026-03-28T20:00:00"
-  },
-  "error": null
-}
-Response (not found)
-{
-  "error": "Task not found with id: 999"
-}
-📍 Get All Tasks
-Request
-GET /api/tasks?page=0&size=10&status=NEW
-Response
-{
-  "success": true,
-  "data": [
-    {
-      "id": 1,
-      "title": "Task 1",
-      "description": "Example",
-      "status": "TODO"
-    }
-  ],
-  "error": null
-}
-📍 Update Task Status
-Request
-PUT /api/tasks/{id}/status?status=DONE
-📍 Delete Task
-Request
-DELETE /api/tasks/{id}
-❗ Error Handling
-
-Global exception handling is implemented.
-
-Standard Errors
-Status	Meaning
-400	Bad Request
-404	Not Found
-500	Internal Server Error
-Example Error Response
-{
-  "error": "Task not found with id: 1"
-}
-🧠 Architecture
-Controller → Service → Repository → Database
-      ↓
-Global Exception Handler
-      ↓
-Standard API Response
-🔥 Key Design Points
-DTO separates API layer from DB layer
-Mapper handles conversion logic
-Service contains business logic only
-Controller handles request/response only
-Global exception handler ensures consistent errors
-📦 Build & Run
-./gradlew clean build
-./gradlew bootRun
-🧪 Testing Tools
-Postman
-IntelliJ HTTP Client
-Curl
-🚀 Future Improvements
-Add Swagger/OpenAPI documentation
-Add JWT authentication (Spring Security)
-Add Flyway/Liquibase migrations
-Add unit/integration tests
-Standardize API response wrapper fully
-👨‍💻 Author
-
-Spring Boot + Kotlin REST API project for learning and backend practice.
-
-📄 License
-
-For educational use only.
-
+Service runs at: http://localhost:8080
 
 ---
 
-If you want next upgrade, I can help you build:
+# 📌 API ENDPOINTS
 
-👉 Swagger UI (auto API docs)  
-👉 JWT login system  
-👉 real production folder architecture  
-👉 Docker deployment  
+## 📍 Initiate Workflow Item
+**Request**
+```
+POST /orchestrator/workflow-items
+{
+  "headline": "My Workflow Item",
+  "narrative": "Item narrative"
+}
+```
 
-Just say **“next level”** 🚀
+**Response**
+```json
+{
+  "identifier": 1,
+  "headline": "My Workflow Item",
+  "narrative": "Item narrative",
+  "phase": "PENDING",
+  "initiatedAt": "2026-03-31T20:00:00Z",
+  "modifiedAt": "2026-03-31T20:00:00Z"
+}
+```
+
+## 📍 Locate Workflow Item by Identifier
+**Request**
+```
+GET /orchestrator/workflow-items/{identifier}
+```
+
+**Response (success)**
+```json
+{
+  "identifier": 1,
+  "headline": "My Workflow Item",
+  "narrative": "Item narrative",
+  "phase": "PENDING",
+  "initiatedAt": "2026-03-31T20:00:00Z",
+  "modifiedAt": "2026-03-31T20:00:00Z"
+}
+```
+
+**Response (not found)**
+```json
+{
+  "error": "Work item not found with identifier: 999"
+}
+```
+
+## 📍 Enumerate All Workflow Items
+**Request**
+```
+GET /orchestrator/workflow-items?pageIndex=0&pageCapacity=10&phase=ACTIVE
+```
+
+**Response**
+```json
+[
+  {
+    "identifier": 1,
+    "headline": "Item 1",
+    "narrative": "Example",
+    "phase": "ACTIVE"
+  }
+]
+```
+
+## 📍 Transition Workflow Item Phase
+**Request**
+```
+PATCH /orchestrator/workflow-items/{identifier}/phase?phase=COMPLETED
+```
+
+## 📍 Eliminate Workflow Item
+**Request**
+```
+DELETE /orchestrator/workflow-items/{identifier}
+```
+
+---
+
+# ❗ Error Handling
+
+Centralized exception handling is implemented.
+
+**Standard Errors**
+| Status | Meaning |
+|--------|---------|
+| 400 | Bad Request |
+| 404 | Not Found |
+| 500 | Internal Server Error |
+
+**Example Error Response**
+```json
+{
+  "error": "Work item not found with identifier: 1"
+}
+```
+
+---
+
+# 🏗 Architecture Pattern
+
+```
+Domain Entities ← → Domain Services ← → Repository Ports
+                                            ↓
+Infrastructure Web ← → Application Contracts ← → Infrastructure Persistence
+                                            ↓
+                                    System Exception Handler
+```
+
+---
+
+# 🔥 Key Design Principles
+
+- Hexagonal architecture separates core domain from infrastructure
+- Contracts isolate API layer from domain layer
+- Transformers handle conversion logic
+- Domain services contain pure business logic
+- Web endpoints handle HTTP concerns only
+- Centralized exception handler ensures consistent errors
+
+---
+
+# 📦 Build & Execute
+
+```bash
+./gradlew clean build
+./gradlew bootRun
+```
+
+---
+
+# 🧪 Testing Tools
+
+- Postman
+- IntelliJ HTTP Client
+- Curl
+
+---
+
+# 🚀 Future Enhancements
+
+- Add OpenAPI/Swagger documentation
+- Add Spring Security with JWT
+- Add database migrations
+- Add comprehensive testing suite
+- Implement event sourcing
+
+---
+
+# 👨‍💻 Author
+
+Spring Boot + Kotlin hexagonal architecture project for advanced backend development.
+
+---
+
+# 📄 License
+
+For educational and research purposes only.
+
+---
+
+If you want advanced features, I can help you implement:
+
+👉 Event-driven architecture  
+👉 CQRS pattern implementation  
+👉 Microservices decomposition  
+👉 Kubernetes deployment  
+
+Just say **"advanced patterns"** 🚀

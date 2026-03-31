@@ -5,8 +5,8 @@ plugins {
     id 'org.jetbrains.kotlin.plugin.spring' version '2.1.20'
 }
 
-group = 'com.example'
-version = '0.0.1-SNAPSHOT'
+group = 'io.nexus'
+version = '1.0.0-ALPHA'
 
 java {
     toolchain {

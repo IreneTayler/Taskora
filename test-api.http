@@ -1,0 +1,25 @@
+### Test Workflow Orchestrator API
+
+### 1. Initiate a new workflow item
+POST http://localhost:8080/orchestrator/workflow-items
+Content-Type: application/json
+
+{
+  "headline": "Database Migration",
+  "narrative": "Migrate legacy database to new schema"
+}
+
+### 2. Enumerate all workflow items
+GET http://localhost:8080/orchestrator/workflow-items?pageIndex=0&pageCapacity=5
+
+### 3. Locate specific workflow item
+GET http://localhost:8080/orchestrator/workflow-items/1
+
+### 4. Transition workflow item phase
+PATCH http://localhost:8080/orchestrator/workflow-items/1/phase?phase=ACTIVE
+
+### 5. Enumerate workflow items by phase
+GET http://localhost:8080/orchestrator/workflow-items?pageIndex=0&pageCapacity=10&phase=ACTIVE
+
+### 6. Eliminate workflow item
+DELETE http://localhost:8080/orchestrator/workflow-items/1

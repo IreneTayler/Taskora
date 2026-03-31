@@ -1,25 +1,53 @@
-### Test Workflow Orchestrator API
+### Task Management API Tests
 
-### 1. Initiate a new workflow item
-POST http://localhost:8080/orchestrator/workflow-items
+### 1. Create a new task
+POST http://localhost:8080/api/tasks
 Content-Type: application/json
 
 {
-  "headline": "Database Migration",
-  "narrative": "Migrate legacy database to new schema"
+  "title": "Prepare monthly report",
+  "description": "Create financial report for March"
 }
 
-### 2. Enumerate all workflow items
-GET http://localhost:8080/orchestrator/workflow-items?pageIndex=0&pageCapacity=5
+### 2. Create task with validation error (title too short)
+POST http://localhost:8080/api/tasks
+Content-Type: application/json
 
-### 3. Locate specific workflow item
-GET http://localhost:8080/orchestrator/workflow-items/1
+{
+  "title": "ab",
+  "description": "This should fail validation"
+}
 
-### 4. Transition workflow item phase
-PATCH http://localhost:8080/orchestrator/workflow-items/1/phase?phase=ACTIVE
+### 3. Get all tasks (first page)
+GET http://localhost:8080/api/tasks?page=0&size=10
 
-### 5. Enumerate workflow items by phase
-GET http://localhost:8080/orchestrator/workflow-items?pageIndex=0&pageCapacity=10&phase=ACTIVE
+### 4. Get tasks filtered by status
+GET http://localhost:8080/api/tasks?page=0&size=10&status=NEW
 
-### 6. Eliminate workflow item
-DELETE http://localhost:8080/orchestrator/workflow-items/1
+### 5. Get task by ID
+GET http://localhost:8080/api/tasks/1
+
+### 6. Get non-existent task (should return 404)
+GET http://localhost:8080/api/tasks/999
+
+### 7. Update task status
+PATCH http://localhost:8080/api/tasks/1/status
+Content-Type: application/json
+
+{
+  "status": "IN_PROGRESS"
+}
+
+### 8. Update non-existent task status (should return 404)
+PATCH http://localhost:8080/api/tasks/999/status
+Content-Type: application/json
+
+{
+  "status": "DONE"
+}
+
+### 9. Delete task
+DELETE http://localhost:8080/api/tasks/1
+
+### 10. Delete non-existent task (should return 404)
+DELETE http://localhost:8080/api/tasks/999

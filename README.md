@@ -1,238 +1,300 @@
-# 🔄 Workflow Orchestrator API
+# Task Management Service
 
-A hexagonal architecture-based RESTful service built with **Spring Boot + Kotlin** for orchestrating workflow items.  
-This project demonstrates ports-adapters pattern, domain-driven design, pagination, contract mapping, and centralized error handling.
+A RESTful task management service built with **Kotlin**, **Spring Boot**, **Reactor**, and **JdbcClient** using native SQL queries. The service implements a reactive architecture with proper layered separation (Controller → Service → Repository).
 
----
+## 🚀 Features
 
-# ⚡ Capabilities
+- **Create tasks** with title and description
+- **Retrieve tasks** by ID or list with pagination and filtering
+- **Update task status** (NEW → IN_PROGRESS → DONE → CANCELLED)
+- **Delete tasks** by ID
+- **Reactive programming** with Mono/Flux throughout the service layer
+- **Native SQL** queries with JdbcClient (no ORM)
+- **Comprehensive validation** and error handling
+- **Unit tests** for all layers with high coverage
 
-- Initiate workflow item
-- Locate workflow item by identifier
-- Enumerate all workflow items (pagination + optional phase filter)
-- Transition workflow item phase
-- Eliminate workflow item
-- Contract-based request/response structure
-- Centralized exception handling (404, 400, 500)
-- Hexagonal architecture implementation
+## 🛠 Tech Stack
 
----
+- **Kotlin** - Primary language
+- **Spring Boot 3.2.0** - Framework
+- **Spring WebFlux** - Reactive web framework
+- **Project Reactor** - Reactive streams (Mono/Flux)
+- **JdbcClient** - Database access with native SQL
+- **H2 Database** - In-memory database for development
+- **Jakarta Validation** - Request validation
+- **JUnit 5** - Testing framework
+- **MockK** - Mocking for Kotlin
 
-# 🛠 Technology Stack
+## 📁 Project Structure
 
-- Kotlin
-- Spring Boot
-- Spring Web
-- Spring JDBC
-- H2 Database (in-memory) or PostgreSQL
-- Gradle
+```
+src/main/kotlin/com/taskmanagement/
+├── controller/          # REST endpoints
+├── service/            # Business logic (reactive)
+├── repository/         # Data access (JdbcClient + SQL)
+├── model/              # Domain entities
+├── dto/                # Request/Response DTOs
+└── exception/          # Error handling
 
----
+src/test/kotlin/com/taskmanagement/
+├── controller/         # Controller unit tests
+├── service/           # Service unit tests
+├── repository/        # Repository integration tests
+└── TaskManagementApplicationTests.kt
+```
 
-# 📁 Architecture Structure
+## 🏗 Architecture
 
-io.nexus.orchestrator
-│
-├── domain
-│   ├── entities # Core business entities
-│   ├── ports # Repository interfaces
-│   └── services # Business logic layer
-├── application
-│   ├── contracts # Request/Response contracts
-│   └── transformers # Entity ↔ Contract conversion
-└── infrastructure
-    ├── web # REST endpoints
-    ├── persistence # Database adapters
-    └── exceptions # Error handling
+The service follows a clean layered architecture with reactive programming:
 
----
+```
+Controller (HTTP) → Service (Reactive) → Repository (JDBC) → Database
+                         ↓
+                 Global Exception Handler
+```
 
-# ⚙️ Setup & Execution
+**Key Design Principles:**
+- **Reactive Service Layer**: All service methods return `Mono<T>` or `Flux<T>`
+- **Native SQL**: Repository uses JdbcClient with hand-written SQL queries
+- **DTO Separation**: Clear separation between API contracts and domain models
+- **Validation**: Input validation with Jakarta Bean Validation
+- **Error Handling**: Centralized exception handling with proper HTTP status codes
 
+## ⚙️ How to Run
+
+### 1. Prerequisites
+- Java 21 or higher
+- No additional setup required (uses embedded H2 database)
+
+### 2. Build the Project
 ```bash
-1. Clone repository
-git clone <your-repo-url>
-cd workflow-orchestrator
+./gradlew clean build -x test
+```
 
-2. Build project
-./gradlew clean build
-
-3. Execute application
+### 3. Run the Application
+```bash
 ./gradlew bootRun
 ```
 
-Service runs at: http://localhost:8080
+The service will start on **http://localhost:8080**
 
----
+### 4. Access H2 Console (Optional)
+- URL: http://localhost:8080/h2-console
+- JDBC URL: `jdbc:h2:mem:taskdb`
+- Username: `sa`
+- Password: (empty)
 
-# 📌 API ENDPOINTS
+## 📌 API Endpoints
 
-## 📍 Initiate Workflow Item
-**Request**
-```
-POST /orchestrator/workflow-items
+### Create Task
+```http
+POST /api/tasks
+Content-Type: application/json
+
 {
-  "headline": "My Workflow Item",
-  "narrative": "Item narrative"
+  "title": "Prepare monthly report",
+  "description": "Create financial report for March"
 }
 ```
 
-**Response**
+**Response (201 Created):**
 ```json
 {
-  "identifier": 1,
-  "headline": "My Workflow Item",
-  "narrative": "Item narrative",
-  "phase": "PENDING",
-  "initiatedAt": "2026-03-31T20:00:00Z",
-  "modifiedAt": "2026-03-31T20:00:00Z"
+  "id": 1,
+  "title": "Prepare monthly report",
+  "description": "Create financial report for March",
+  "status": "NEW",
+  "createdAt": "2026-03-31T12:00:00",
+  "updatedAt": "2026-03-31T12:00:00"
 }
 ```
 
-## 📍 Locate Workflow Item by Identifier
-**Request**
-```
-GET /orchestrator/workflow-items/{identifier}
+### Get All Tasks (with Pagination)
+```http
+GET /api/tasks?page=0&size=10&status=NEW
 ```
 
-**Response (success)**
+**Response (200 OK):**
 ```json
 {
-  "identifier": 1,
-  "headline": "My Workflow Item",
-  "narrative": "Item narrative",
-  "phase": "PENDING",
-  "initiatedAt": "2026-03-31T20:00:00Z",
-  "modifiedAt": "2026-03-31T20:00:00Z"
+  "content": [
+    {
+      "id": 1,
+      "title": "Prepare monthly report",
+      "description": "Create financial report for March",
+      "status": "NEW",
+      "createdAt": "2026-03-31T12:00:00",
+      "updatedAt": "2026-03-31T12:00:00"
+    }
+  ],
+  "page": 0,
+  "size": 10,
+  "totalElements": 1,
+  "totalPages": 1
 }
 ```
 
-**Response (not found)**
-```json
+### Get Task by ID
+```http
+GET /api/tasks/1
+```
+
+### Update Task Status
+```http
+PATCH /api/tasks/1/status
+Content-Type: application/json
+
 {
-  "error": "Work item not found with identifier: 999"
+  "status": "IN_PROGRESS"
 }
 ```
 
-## 📍 Enumerate All Workflow Items
-**Request**
+### Delete Task
+```http
+DELETE /api/tasks/1
 ```
-GET /orchestrator/workflow-items?pageIndex=0&pageCapacity=10&phase=ACTIVE
-```
+**Response: 204 No Content**
 
-**Response**
-```json
-[
-  {
-    "identifier": 1,
-    "headline": "Item 1",
-    "narrative": "Example",
-    "phase": "ACTIVE"
-  }
-]
+## 🧪 Testing
+
+### Run All Tests
+```bash
+./gradlew test
 ```
 
-## 📍 Transition Workflow Item Phase
-**Request**
-```
-PATCH /orchestrator/workflow-items/{identifier}/phase?phase=COMPLETED
-```
+### Test Coverage
+The project includes comprehensive tests:
 
-## 📍 Eliminate Workflow Item
-**Request**
-```
-DELETE /orchestrator/workflow-items/{identifier}
-```
+- **Service Tests**: Mock repository, test reactive flows
+- **Controller Tests**: Test HTTP endpoints, validation, status codes
+- **Repository Tests**: Integration tests with H2 database
+- **Error Scenarios**: 404 Not Found, validation errors, etc.
 
----
+### Manual API Testing
 
-# ❗ Error Handling
-
-Centralized exception handling is implemented.
-
-**Standard Errors**
-| Status | Meaning |
-|--------|---------|
-| 400 | Bad Request |
-| 404 | Not Found |
-| 500 | Internal Server Error |
-
-**Example Error Response**
-```json
-{
-  "error": "Work item not found with identifier: 1"
-}
-```
-
----
-
-# 🏗 Architecture Pattern
-
-```
-Domain Entities ← → Domain Services ← → Repository Ports
-                                            ↓
-Infrastructure Web ← → Application Contracts ← → Infrastructure Persistence
-                                            ↓
-                                    System Exception Handler
-```
-
----
-
-# 🔥 Key Design Principles
-
-- Hexagonal architecture separates core domain from infrastructure
-- Contracts isolate API layer from domain layer
-- Transformers handle conversion logic
-- Domain services contain pure business logic
-- Web endpoints handle HTTP concerns only
-- Centralized exception handler ensures consistent errors
-
----
-
-# 📦 Build & Execute
+Use the provided `test-api.http` file with your IDE's HTTP client, or use curl:
 
 ```bash
-./gradlew clean build
-./gradlew bootRun
+# Create a task
+curl -X POST http://localhost:8080/api/tasks \
+  -H "Content-Type: application/json" \
+  -d '{"title":"Test Task","description":"Testing the API"}'
+
+# Get all tasks
+curl "http://localhost:8080/api/tasks?page=0&size=10"
+
+# Get task by ID
+curl http://localhost:8080/api/tasks/1
+
+# Update status
+curl -X PATCH http://localhost:8080/api/tasks/1/status \
+  -H "Content-Type: application/json" \
+  -d '{"status":"DONE"}'
+
+# Delete task
+curl -X DELETE http://localhost:8080/api/tasks/1
 ```
 
+## 🔧 Configuration
+
+### Database Configuration (application.yml)
+```yaml
+spring:
+  datasource:
+    url: jdbc:h2:mem:taskdb
+    username: sa
+    password: 
+    driver-class-name: org.h2.Driver
+```
+
+### Task Status Values
+- `NEW` - Initial status for new tasks
+- `IN_PROGRESS` - Task is being worked on
+- `DONE` - Task completed successfully
+- `CANCELLED` - Task was cancelled
+
+## ✅ Validation Rules
+
+- **Title**: Required, 3-100 characters
+- **Description**: Optional
+- **Status**: Must be valid enum value
+
+## 🚨 Error Handling
+
+The service provides consistent error responses:
+
+**404 Not Found:**
+```json
+{
+  "message": "Task not found with id: 999"
+}
+```
+
+**400 Bad Request (Validation):**
+```json
+{
+  "message": "Validation failed: title: Title must be between 3 and 100 characters"
+}
+```
+
+## 🎯 Key Implementation Details
+
+### Reactive Service Layer
+All service methods use Project Reactor:
+```kotlin
+fun createTask(request: TaskRequest): Mono<TaskResponse>
+fun getTaskById(id: Long): Mono<TaskResponse>
+fun getTasks(page: Int, size: Int, status: TaskStatus?): Mono<PageResponse<TaskResponse>>
+```
+
+### Native SQL with JdbcClient
+```kotlin
+fun findAll(page: Int, size: Int, status: TaskStatus?): List<Task> {
+    val sql = """
+        SELECT * FROM tasks 
+        WHERE status = :status 
+        ORDER BY created_at DESC 
+        LIMIT :size OFFSET :offset
+    """
+    return jdbcClient.sql(sql)
+        .param("status", status?.name)
+        .param("size", size)
+        .param("offset", page * size)
+        .query { rs, _ -> mapRowToTask(rs) }
+        .list()
+}
+```
+
+### Reactive Error Handling
+```kotlin
+fun getTaskById(id: Long): Mono<TaskResponse> {
+    return Mono.fromCallable {
+        taskRepository.findById(id)
+            ?: throw TaskNotFoundException("Task not found with id: $id")
+    }
+    .map { mapToResponse(it) }
+    .subscribeOn(Schedulers.boundedElastic())
+}
+```
+
+## 📈 Performance Considerations
+
+- **Reactive Streams**: Non-blocking I/O with Reactor
+- **Connection Pooling**: HikariCP for database connections
+- **Pagination**: Efficient LIMIT/OFFSET queries
+- **Bounded Elastic Scheduler**: For blocking database operations
+
+## 🔄 Future Enhancements
+
+- Add Redis caching for frequently accessed tasks
+- Implement task assignment to users
+- Add task priorities and due dates
+- Implement audit logging
+- Add metrics and monitoring
+- Database migrations with Flyway
+
 ---
 
-# 🧪 Testing Tools
-
-- Postman
-- IntelliJ HTTP Client
-- Curl
-
----
-
-# 🚀 Future Enhancements
-
-- Add OpenAPI/Swagger documentation
-- Add Spring Security with JWT
-- Add database migrations
-- Add comprehensive testing suite
-- Implement event sourcing
-
----
-
-# 👨‍💻 Author
-
-Spring Boot + Kotlin hexagonal architecture project for advanced backend development.
-
----
-
-# 📄 License
-
-For educational and research purposes only.
-
----
-
-If you want advanced features, I can help you implement:
-
-👉 Event-driven architecture  
-👉 CQRS pattern implementation  
-👉 Microservices decomposition  
-👉 Kubernetes deployment  
-
-Just say **"advanced patterns"** 🚀
+**Author**: Task Management Service  
+**License**: MIT  
+**Version**: 1.0.0

@@ -1,6 +1,6 @@
-INSERT INTO workflow_items (headline, narrative, phase, initiated_at, modified_at) VALUES
-('System Integration', 'Integrate payment gateway with core system', 'PENDING', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-('Database Optimization', 'Optimize query performance for reporting module', 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-('Security Audit', 'Conduct comprehensive security assessment', 'COMPLETED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-('API Documentation', 'Create comprehensive API documentation', 'PENDING', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-('Performance Testing', 'Execute load testing on production environment', 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+INSERT INTO tasks (title, description, status, created_at, updated_at) VALUES
+('Prepare monthly report', 'Create financial report for March', 'NEW', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+('Review code changes', 'Review pull request #123', 'IN_PROGRESS', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+('Deploy to production', 'Deploy version 1.2.0', 'DONE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+('Fix bug in login', 'Users cannot login with special characters', 'NEW', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+('Update documentation', 'Update API documentation', 'CANCELLED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);

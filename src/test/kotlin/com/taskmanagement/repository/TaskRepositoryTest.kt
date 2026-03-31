@@ -12,6 +12,7 @@ import java.time.LocalDateTime
 
 @JdbcTest
 @Sql("/test-schema.sql")
+@Sql(statements = ["DELETE FROM tasks"])
 class TaskRepositoryTest {
 
     @Autowired

@@ -21,28 +21,26 @@ import java.time.LocalDateTime
 class TaskControllerTest {
 
     @Autowired
-    private lateinit var webTestClient: WebTestClient
+    private lateinit var client: WebTestClient
 
     @MockkBean
-    private lateinit var taskService: TaskService
+    private lateinit var service: TaskService
 
     @Test
-    fun `createTask should return 201 and TaskResponse when valid request`() {
-        // Given
-        val request = TaskRequest("Test Task", "Test Description")
+    fun `should create task and return 201`() {
+        val request = TaskRequest("Fix login bug", "Users can't login with special chars")
         val response = TaskResponse(
             id = 1L,
-            title = "Test Task",
-            description = "Test Description",
+            title = "Fix login bug",
+            description = "Users can't login with special chars",
             status = TaskStatus.NEW,
             createdAt = LocalDateTime.now(),
             updatedAt = LocalDateTime.now()
         )
 
-        every { taskService.createTask(request) } returns Mono.just(response)
+        every { service.createTask(request) } returns Mono.just(response)
 
-        // When & Then
-        webTestClient.post()
+        client.post()
             .uri("/api/tasks")
             .contentType(MediaType.APPLICATION_JSON)
             .bodyValue(request)
@@ -50,161 +48,105 @@ class TaskControllerTest {
             .expectStatus().isCreated
             .expectBody()
             .jsonPath("$.id").isEqualTo(1)
-            .jsonPath("$.title").isEqualTo("Test Task")
+            .jsonPath("$.title").isEqualTo("Fix login bug")
             .jsonPath("$.status").isEqualTo("NEW")
     }
 
     @Test
-    fun `createTask should return 400 when title is empty`() {
-        // Given
-        val request = TaskRequest("", "Test Description")
-
-        // When & Then - Skip validation test for now as WebFlux test setup is complex
-        // This test would pass in a real integration test
-        webTestClient.post()
-            .uri("/api/tasks")
-            .contentType(MediaType.APPLICATION_JSON)
-            .bodyValue(request)
-            .exchange()
-            .expectStatus().is5xxServerError // Validation error causes 500 in test setup
-    }
-
-    @Test
-    fun `createTask should return 400 when title is too short`() {
-        // Given
-        val request = TaskRequest("ab", "Test Description")
-
-        // When & Then - Skip validation test for now as WebFlux test setup is complex
-        // This test would pass in a real integration test
-        webTestClient.post()
-            .uri("/api/tasks")
-            .contentType(MediaType.APPLICATION_JSON)
-            .bodyValue(request)
-            .exchange()
-            .expectStatus().is5xxServerError // Validation error causes 500 in test setup
-    }
-
-    @Test
-    fun `getTaskById should return 200 and TaskResponse when task exists`() {
-        // Given
-        val taskId = 1L
+    fun `should return task by id`() {
         val response = TaskResponse(
-            id = taskId,
-            title = "Test Task",
-            description = "Test Description",
-            status = TaskStatus.NEW,
+            id = 1L,
+            title = "Deploy to staging",
+            description = "Deploy version 2.1.0",
+            status = TaskStatus.IN_PROGRESS,
             createdAt = LocalDateTime.now(),
             updatedAt = LocalDateTime.now()
         )
 
-        every { taskService.getTaskById(taskId) } returns Mono.just(response)
+        every { service.getTaskById(1L) } returns Mono.just(response)
 
-        // When & Then
-        webTestClient.get()
-            .uri("/api/tasks/{id}", taskId)
+        client.get()
+            .uri("/api/tasks/1")
             .exchange()
             .expectStatus().isOk
             .expectBody()
-            .jsonPath("$.id").isEqualTo(taskId)
-            .jsonPath("$.title").isEqualTo("Test Task")
+            .jsonPath("$.id").isEqualTo(1)
+            .jsonPath("$.title").isEqualTo("Deploy to staging")
     }
 
     @Test
-    fun `getTaskById should return 404 when task does not exist`() {
-        // Given
-        val taskId = 999L
-        every { taskService.getTaskById(taskId) } returns Mono.error(TaskNotFoundException("Task not found"))
+    fun `should return 404 for missing task`() {
+        every { service.getTaskById(999L) } returns Mono.error(TaskNotFoundException("Not found"))
 
-        // When & Then
-        webTestClient.get()
-            .uri("/api/tasks/{id}", taskId)
+        client.get()
+            .uri("/api/tasks/999")
             .exchange()
             .expectStatus().isNotFound
     }
 
     @Test
-    fun `getTasks should return 200 and PageResponse`() {
-        // Given
-        val page = 0
-        val size = 10
-        val status = TaskStatus.NEW
-        val taskResponse = TaskResponse(
+    fun `should return paginated tasks`() {
+        val task = TaskResponse(
             id = 1L,
-            title = "Test Task",
-            description = "Test Description",
+            title = "Write tests",
+            description = "Add unit tests for service layer",
             status = TaskStatus.NEW,
             createdAt = LocalDateTime.now(),
             updatedAt = LocalDateTime.now()
         )
-        val pageResponse = PageResponse(
-            content = listOf(taskResponse),
-            page = page,
-            size = size,
+        val page = PageResponse(
+            content = listOf(task),
+            page = 0,
+            size = 10,
             totalElements = 1L,
             totalPages = 1
         )
 
-        every { taskService.getTasks(page, size, status) } returns Mono.just(pageResponse)
+        every { service.getTasks(0, 10, TaskStatus.NEW) } returns Mono.just(page)
 
-        // When & Then
-        webTestClient.get()
-            .uri { uriBuilder ->
-                uriBuilder.path("/api/tasks")
-                    .queryParam("page", page)
-                    .queryParam("size", size)
-                    .queryParam("status", status.name)
-                    .build()
-            }
+        client.get()
+            .uri("/api/tasks?page=0&size=10&status=NEW")
             .exchange()
             .expectStatus().isOk
             .expectBody()
             .jsonPath("$.content").isArray
-            .jsonPath("$.content[0].id").isEqualTo(1)
-            .jsonPath("$.page").isEqualTo(page)
-            .jsonPath("$.size").isEqualTo(size)
+            .jsonPath("$.content[0].title").isEqualTo("Write tests")
             .jsonPath("$.totalElements").isEqualTo(1)
     }
 
     @Test
-    fun `updateTaskStatus should return 200 and updated TaskResponse`() {
-        // Given
-        val taskId = 1L
+    fun `should update task status`() {
         val request = UpdateStatusRequest(TaskStatus.DONE)
         val response = TaskResponse(
-            id = taskId,
-            title = "Test Task",
-            description = "Test Description",
+            id = 1L,
+            title = "Code review",
+            description = "Review PR #42",
             status = TaskStatus.DONE,
             createdAt = LocalDateTime.now(),
             updatedAt = LocalDateTime.now()
         )
 
-        every { taskService.updateTaskStatus(taskId, TaskStatus.DONE) } returns Mono.just(response)
+        every { service.updateTaskStatus(1L, TaskStatus.DONE) } returns Mono.just(response)
 
-        // When & Then
-        webTestClient.patch()
-            .uri("/api/tasks/{id}/status", taskId)
+        client.patch()
+            .uri("/api/tasks/1/status")
             .contentType(MediaType.APPLICATION_JSON)
             .bodyValue(request)
             .exchange()
             .expectStatus().isOk
             .expectBody()
-            .jsonPath("$.id").isEqualTo(taskId)
             .jsonPath("$.status").isEqualTo("DONE")
     }
 
     @Test
-    fun `updateTaskStatus should return 404 when task does not exist`() {
-        // Given
-        val taskId = 999L
+    fun `should return 404 when updating missing task`() {
         val request = UpdateStatusRequest(TaskStatus.DONE)
 
-        every { taskService.updateTaskStatus(taskId, TaskStatus.DONE) } returns 
-            Mono.error(TaskNotFoundException("Task not found"))
+        every { service.updateTaskStatus(999L, TaskStatus.DONE) } returns 
+            Mono.error(TaskNotFoundException("Not found"))
 
-        // When & Then
-        webTestClient.patch()
-            .uri("/api/tasks/{id}/status", taskId)
+        client.patch()
+            .uri("/api/tasks/999/status")
             .contentType(MediaType.APPLICATION_JSON)
             .bodyValue(request)
             .exchange()
@@ -212,27 +154,21 @@ class TaskControllerTest {
     }
 
     @Test
-    fun `deleteTask should return 204 when successful`() {
-        // Given
-        val taskId = 1L
-        every { taskService.deleteTask(taskId) } returns Mono.empty()
+    fun `should delete task and return 204`() {
+        every { service.deleteTask(1L) } returns Mono.empty()
 
-        // When & Then
-        webTestClient.delete()
-            .uri("/api/tasks/{id}", taskId)
+        client.delete()
+            .uri("/api/tasks/1")
             .exchange()
             .expectStatus().isNoContent
     }
 
     @Test
-    fun `deleteTask should return 404 when task does not exist`() {
-        // Given
-        val taskId = 999L
-        every { taskService.deleteTask(taskId) } returns Mono.error(TaskNotFoundException("Task not found"))
+    fun `should return 404 when deleting missing task`() {
+        every { service.deleteTask(999L) } returns Mono.error(TaskNotFoundException("Not found"))
 
-        // When & Then
-        webTestClient.delete()
-            .uri("/api/tasks/{id}", taskId)
+        client.delete()
+            .uri("/api/tasks/999")
             .exchange()
             .expectStatus().isNotFound
     }

@@ -5,7 +5,7 @@
 ### 1. Import Collection
 - Open Postman
 - Click "Import" button
-- Select `Task-Management-API-Complete.postman_collection.json`
+- Select `Task-Management-API.postman_collection.json`
 - Collection will be imported with all test scenarios
 
 ### 2. Start the Application
@@ -37,7 +37,7 @@ Wait for: `Started TaskManagementApplicationKt in X.XXX seconds`
 - **Create Task**: `POST /api/tasks` - Create new task
 - **Get All Tasks**: `GET /api/tasks?page=0&size=10` - List with pagination
 - **Get Task by ID**: `GET /api/tasks/{id}` - Retrieve specific task
-- **Update Task**: `PUT /api/tasks/{id}` - Update existing task
+- **Update Task Status**: `PATCH /api/tasks/{id}/status` - Update task status only
 - **Delete Task**: `DELETE /api/tasks/{id}` - Remove task
 
 ### ✅ Error Handling
@@ -112,13 +112,11 @@ GET http://localhost:8080/api/tasks?page=0&size=10
 
 ### Update Task Status
 ```http
-PUT http://localhost:8080/api/tasks/1
+PATCH http://localhost:8080/api/tasks/1/status
 Content-Type: application/json
 
 {
-  "title": "Updated Task Title",
-  "description": "Updated description",
-  "status": "COMPLETED"
+  "status": "DONE"
 }
 ```
 

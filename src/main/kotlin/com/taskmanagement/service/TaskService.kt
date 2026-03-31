@@ -12,75 +12,60 @@ import reactor.core.publisher.Mono
 import reactor.core.scheduler.Schedulers
 
 @Service
-class TaskService(private val taskRepository: TaskRepository) {
+class TaskService(private val repository: TaskRepository) {
 
     fun createTask(request: TaskRequest): Mono<TaskResponse> {
         return Mono.fromCallable {
-            val task = Task(
-                title = request.title,
-                description = request.description
-            )
-            val savedTask = taskRepository.save(task)
-            mapToResponse(savedTask)
+            val newTask = Task(title = request.title, description = request.description)
+            repository.save(newTask).toResponse()
         }.subscribeOn(Schedulers.boundedElastic())
     }
 
     fun getTaskById(id: Long): Mono<TaskResponse> {
         return Mono.fromCallable {
-            taskRepository.findById(id)
-                ?: throw TaskNotFoundException("Task not found with id: $id")
-        }
-        .map { mapToResponse(it) }
-        .subscribeOn(Schedulers.boundedElastic())
+            repository.findById(id)?.toResponse() 
+                ?: throw TaskNotFoundException("Task with id $id not found")
+        }.subscribeOn(Schedulers.boundedElastic())
     }
 
     fun getTasks(page: Int, size: Int, status: TaskStatus?): Mono<PageResponse<TaskResponse>> {
         return Mono.fromCallable {
-            val tasks = taskRepository.findAll(page, size, status)
-            val totalElements = taskRepository.count(status)
-            val totalPages = ((totalElements + size - 1) / size).toInt()
-
+            val tasks = repository.findAll(page, size, status)
+            val total = repository.count(status)
+            
             PageResponse(
-                content = tasks.map { mapToResponse(it) },
+                content = tasks.map { it.toResponse() },
                 page = page,
                 size = size,
-                totalElements = totalElements,
-                totalPages = totalPages
+                totalElements = total,
+                totalPages = (total + size - 1).toInt() / size
             )
         }.subscribeOn(Schedulers.boundedElastic())
     }
 
-    fun updateTaskStatus(id: Long, status: TaskStatus): Mono<TaskResponse> {
+    fun updateTaskStatus(id: Long, newStatus: TaskStatus): Mono<TaskResponse> {
         return Mono.fromCallable {
-            val updated = taskRepository.updateStatus(id, status)
-            if (!updated) {
-                throw TaskNotFoundException("Task not found with id: $id")
+            if (!repository.updateStatus(id, newStatus)) {
+                throw TaskNotFoundException("Task with id $id not found")
             }
-            taskRepository.findById(id)!!
-        }
-        .map { mapToResponse(it) }
-        .subscribeOn(Schedulers.boundedElastic())
+            repository.findById(id)!!.toResponse()
+        }.subscribeOn(Schedulers.boundedElastic())
     }
 
     fun deleteTask(id: Long): Mono<Void> {
         return Mono.fromCallable {
-            val deleted = taskRepository.deleteById(id)
-            if (!deleted) {
-                throw TaskNotFoundException("Task not found with id: $id")
+            if (!repository.deleteById(id)) {
+                throw TaskNotFoundException("Task with id $id not found")
             }
-        }
-        .then()
-        .subscribeOn(Schedulers.boundedElastic())
+        }.then().subscribeOn(Schedulers.boundedElastic())
     }
 
-    private fun mapToResponse(task: Task): TaskResponse {
-        return TaskResponse(
-            id = task.id!!,
-            title = task.title,
-            description = task.description,
-            status = task.status,
-            createdAt = task.createdAt,
-            updatedAt = task.updatedAt
-        )
-    }
+    private fun Task.toResponse() = TaskResponse(
+        id = id!!,
+        title = title,
+        description = description,
+        status = status,
+        createdAt = createdAt,
+        updatedAt = updatedAt
+    )
 }

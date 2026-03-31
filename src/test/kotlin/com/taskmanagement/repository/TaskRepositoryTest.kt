@@ -8,7 +8,6 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.jdbc.JdbcTest
 import org.springframework.jdbc.core.simple.JdbcClient
 import org.springframework.test.context.jdbc.Sql
-import java.time.LocalDateTime
 
 @JdbcTest
 @Sql("/test-schema.sql")
@@ -16,153 +15,114 @@ import java.time.LocalDateTime
 class TaskRepositoryTest {
 
     @Autowired
-    private lateinit var jdbcClient: JdbcClient
+    private lateinit var client: JdbcClient
 
-    private val taskRepository by lazy { TaskRepository(jdbcClient) }
+    private val repository by lazy { TaskRepository(client) }
 
     @Test
-    fun `save should persist task and return with generated id`() {
-        // Given
-        val task = Task(
-            title = "Test Task",
-            description = "Test Description",
-            status = TaskStatus.NEW
-        )
+    fun `should save task with generated id`() {
+        val task = Task(title = "Setup CI pipeline", description = "Configure GitHub Actions")
 
-        // When
-        val savedTask = taskRepository.save(task)
+        val saved = repository.save(task)
 
-        // Then
-        assertNotNull(savedTask.id)
-        assertEquals("Test Task", savedTask.title)
-        assertEquals("Test Description", savedTask.description)
-        assertEquals(TaskStatus.NEW, savedTask.status)
+        assertNotNull(saved.id)
+        assertEquals("Setup CI pipeline", saved.title)
+        assertEquals("Configure GitHub Actions", saved.description)
+        assertEquals(TaskStatus.NEW, saved.status)
     }
 
     @Test
-    fun `findById should return task when exists`() {
-        // Given
-        val task = Task(title = "Test Task", description = "Test Description")
-        val savedTask = taskRepository.save(task)
+    fun `should find existing task by id`() {
+        val task = Task(title = "Database migration", description = "Add user preferences table")
+        val saved = repository.save(task)
 
-        // When
-        val foundTask = taskRepository.findById(savedTask.id!!)
+        val found = repository.findById(saved.id!!)
 
-        // Then
-        assertNotNull(foundTask)
-        assertEquals(savedTask.id, foundTask!!.id)
-        assertEquals("Test Task", foundTask.title)
+        assertNotNull(found)
+        assertEquals(saved.id, found!!.id)
+        assertEquals("Database migration", found.title)
     }
 
     @Test
-    fun `findById should return null when task does not exist`() {
-        // When
-        val foundTask = taskRepository.findById(999L)
-
-        // Then
-        assertNull(foundTask)
+    fun `should return null for non-existent task`() {
+        val found = repository.findById(999L)
+        assertNull(found)
     }
 
     @Test
-    fun `findAll should return paginated results`() {
-        // Given
+    fun `should paginate results correctly`() {
         repeat(15) { i ->
-            taskRepository.save(Task(title = "Task $i", description = "Description $i"))
+            repository.save(Task(title = "Task ${i + 1}", description = "Description ${i + 1}"))
         }
 
-        // When
-        val tasks = taskRepository.findAll(page = 0, size = 10, status = null)
+        val firstPage = repository.findAll(0, 10, null)
+        assertEquals(10, firstPage.size)
 
-        // Then
-        assertEquals(10, tasks.size)
+        val secondPage = repository.findAll(1, 10, null)
+        assertEquals(5, secondPage.size)
     }
 
     @Test
-    fun `findAll should filter by status`() {
-        // Given
-        taskRepository.save(Task(title = "Task 1", status = TaskStatus.NEW))
-        taskRepository.save(Task(title = "Task 2", status = TaskStatus.IN_PROGRESS))
-        taskRepository.save(Task(title = "Task 3", status = TaskStatus.NEW))
+    fun `should filter tasks by status`() {
+        repository.save(Task(title = "Bug fix", status = TaskStatus.NEW))
+        repository.save(Task(title = "Feature work", status = TaskStatus.IN_PROGRESS))
+        repository.save(Task(title = "Documentation", status = TaskStatus.NEW))
 
-        // When
-        val newTasks = taskRepository.findAll(page = 0, size = 10, status = TaskStatus.NEW)
+        val newTasks = repository.findAll(0, 10, TaskStatus.NEW)
 
-        // Then
         assertEquals(2, newTasks.size)
         assertTrue(newTasks.all { it.status == TaskStatus.NEW })
     }
 
     @Test
-    fun `count should return total count`() {
-        // Given
-        repeat(5) { i ->
-            taskRepository.save(Task(title = "Task $i"))
+    fun `should count all tasks`() {
+        repeat(3) { i ->
+            repository.save(Task(title = "Task ${i + 1}"))
         }
 
-        // When
-        val count = taskRepository.count(null)
-
-        // Then
-        assertEquals(5L, count)
+        val count = repository.count(null)
+        assertEquals(3L, count)
     }
 
     @Test
-    fun `count should return filtered count`() {
-        // Given
-        taskRepository.save(Task(title = "Task 1", status = TaskStatus.NEW))
-        taskRepository.save(Task(title = "Task 2", status = TaskStatus.IN_PROGRESS))
-        taskRepository.save(Task(title = "Task 3", status = TaskStatus.NEW))
+    fun `should count tasks by status`() {
+        repository.save(Task(title = "Task 1", status = TaskStatus.NEW))
+        repository.save(Task(title = "Task 2", status = TaskStatus.IN_PROGRESS))
+        repository.save(Task(title = "Task 3", status = TaskStatus.NEW))
 
-        // When
-        val newCount = taskRepository.count(TaskStatus.NEW)
-
-        // Then
+        val newCount = repository.count(TaskStatus.NEW)
         assertEquals(2L, newCount)
     }
 
     @Test
-    fun `updateStatus should update task status and return true when task exists`() {
-        // Given
-        val task = taskRepository.save(Task(title = "Test Task", status = TaskStatus.NEW))
+    fun `should update task status successfully`() {
+        val task = repository.save(Task(title = "Code review", status = TaskStatus.NEW))
 
-        // When
-        val updated = taskRepository.updateStatus(task.id!!, TaskStatus.DONE)
-
-        // Then
+        val updated = repository.updateStatus(task.id!!, TaskStatus.DONE)
         assertTrue(updated)
         
-        val updatedTask = taskRepository.findById(task.id!!)
-        assertEquals(TaskStatus.DONE, updatedTask?.status)
+        val found = repository.findById(task.id!!)
+        assertEquals(TaskStatus.DONE, found?.status)
     }
 
     @Test
-    fun `updateStatus should return false when task does not exist`() {
-        // When
-        val updated = taskRepository.updateStatus(999L, TaskStatus.DONE)
-
-        // Then
-        assertEquals(false, updated)
+    fun `should fail to update non-existent task`() {
+        val updated = repository.updateStatus(999L, TaskStatus.DONE)
+        assertFalse(updated)
     }
 
     @Test
-    fun `deleteById should delete task and return true when task exists`() {
-        // Given
-        val task = taskRepository.save(Task(title = "Test Task"))
+    fun `should delete existing task`() {
+        val task = repository.save(Task(title = "Cleanup logs"))
 
-        // When
-        val deleted = taskRepository.deleteById(task.id!!)
-
-        // Then
+        val deleted = repository.deleteById(task.id!!)
         assertTrue(deleted)
-        assertNull(taskRepository.findById(task.id!!))
+        assertNull(repository.findById(task.id!!))
     }
 
     @Test
-    fun `deleteById should return false when task does not exist`() {
-        // When
-        val deleted = taskRepository.deleteById(999L)
-
-        // Then
-        assertEquals(false, deleted)
+    fun `should fail to delete non-existent task`() {
+        val deleted = repository.deleteById(999L)
+        assertFalse(deleted)
     }
 }

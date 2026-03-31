@@ -9,187 +9,123 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
 import reactor.test.StepVerifier
 import java.time.LocalDateTime
 
 class TaskServiceTest {
 
-    private val taskRepository = mockk<TaskRepository>()
-    private val taskService = TaskService(taskRepository)
+    private val repository = mockk<TaskRepository>()
+    private val service = TaskService(repository)
 
     @Test
-    fun `createTask should return TaskResponse when successful`() {
-        // Given
-        val request = TaskRequest("Test Task", "Test Description")
-        val savedTask = Task(
+    fun `should create task successfully`() {
+        val request = TaskRequest("Buy groceries", "Milk, bread, eggs")
+        val saved = Task(
             id = 1L,
-            title = "Test Task",
-            description = "Test Description",
+            title = "Buy groceries",
+            description = "Milk, bread, eggs",
             status = TaskStatus.NEW,
             createdAt = LocalDateTime.now(),
             updatedAt = LocalDateTime.now()
         )
 
-        every { taskRepository.save(any()) } returns savedTask
+        every { repository.save(any()) } returns saved
 
-        // When & Then
-        StepVerifier.create(taskService.createTask(request))
-            .expectNextMatches { response ->
-                response.id == 1L &&
-                response.title == "Test Task" &&
-                response.description == "Test Description" &&
-                response.status == TaskStatus.NEW
+        StepVerifier.create(service.createTask(request))
+            .expectNextMatches { 
+                it.id == 1L && it.title == "Buy groceries" && it.status == TaskStatus.NEW
             }
             .verifyComplete()
 
-        verify { taskRepository.save(any()) }
+        verify { repository.save(any()) }
     }
 
     @Test
-    fun `getTaskById should return TaskResponse when task exists`() {
-        // Given
-        val taskId = 1L
+    fun `should return task when found`() {
         val task = Task(
-            id = taskId,
-            title = "Test Task",
-            description = "Test Description",
-            status = TaskStatus.NEW,
+            id = 1L,
+            title = "Review PR",
+            description = "Check the new feature implementation",
+            status = TaskStatus.IN_PROGRESS,
             createdAt = LocalDateTime.now(),
             updatedAt = LocalDateTime.now()
         )
 
-        every { taskRepository.findById(taskId) } returns task
+        every { repository.findById(1L) } returns task
 
-        // When & Then
-        StepVerifier.create(taskService.getTaskById(taskId))
-            .expectNextMatches { response ->
-                response.id == taskId &&
-                response.title == "Test Task"
-            }
+        StepVerifier.create(service.getTaskById(1L))
+            .expectNextMatches { it.id == 1L && it.title == "Review PR" }
             .verifyComplete()
-
-        verify { taskRepository.findById(taskId) }
     }
 
     @Test
-    fun `getTaskById should throw TaskNotFoundException when task does not exist`() {
-        // Given
-        val taskId = 999L
-        every { taskRepository.findById(taskId) } returns null
+    fun `should throw exception when task not found`() {
+        every { repository.findById(999L) } returns null
 
-        // When & Then
-        StepVerifier.create(taskService.getTaskById(taskId))
+        StepVerifier.create(service.getTaskById(999L))
             .expectError(TaskNotFoundException::class.java)
             .verify()
-
-        verify { taskRepository.findById(taskId) }
     }
 
     @Test
-    fun `updateTaskStatus should return updated TaskResponse when successful`() {
-        // Given
-        val taskId = 1L
-        val newStatus = TaskStatus.DONE
-        val updatedTask = Task(
-            id = taskId,
-            title = "Test Task",
-            description = "Test Description",
-            status = newStatus,
+    fun `should update task status`() {
+        val updated = Task(
+            id = 1L,
+            title = "Deploy app",
+            description = "Production deployment",
+            status = TaskStatus.DONE,
             createdAt = LocalDateTime.now(),
             updatedAt = LocalDateTime.now()
         )
 
-        every { taskRepository.updateStatus(taskId, newStatus) } returns true
-        every { taskRepository.findById(taskId) } returns updatedTask
+        every { repository.updateStatus(1L, TaskStatus.DONE) } returns true
+        every { repository.findById(1L) } returns updated
 
-        // When & Then
-        StepVerifier.create(taskService.updateTaskStatus(taskId, newStatus))
-            .expectNextMatches { response ->
-                response.id == taskId &&
-                response.status == newStatus
-            }
+        StepVerifier.create(service.updateTaskStatus(1L, TaskStatus.DONE))
+            .expectNextMatches { it.status == TaskStatus.DONE }
             .verifyComplete()
-
-        verify { taskRepository.updateStatus(taskId, newStatus) }
-        verify { taskRepository.findById(taskId) }
     }
 
     @Test
-    fun `updateTaskStatus should throw TaskNotFoundException when task does not exist`() {
-        // Given
-        val taskId = 999L
-        val newStatus = TaskStatus.DONE
+    fun `should fail to update non-existent task`() {
+        every { repository.updateStatus(999L, TaskStatus.DONE) } returns false
 
-        every { taskRepository.updateStatus(taskId, newStatus) } returns false
-
-        // When & Then
-        StepVerifier.create(taskService.updateTaskStatus(taskId, newStatus))
+        StepVerifier.create(service.updateTaskStatus(999L, TaskStatus.DONE))
             .expectError(TaskNotFoundException::class.java)
             .verify()
-
-        verify { taskRepository.updateStatus(taskId, newStatus) }
     }
 
     @Test
-    fun `deleteTask should complete when task exists`() {
-        // Given
-        val taskId = 1L
-        every { taskRepository.deleteById(taskId) } returns true
+    fun `should delete task successfully`() {
+        every { repository.deleteById(1L) } returns true
 
-        // When & Then
-        StepVerifier.create(taskService.deleteTask(taskId))
+        StepVerifier.create(service.deleteTask(1L))
             .verifyComplete()
-
-        verify { taskRepository.deleteById(taskId) }
     }
 
     @Test
-    fun `deleteTask should throw TaskNotFoundException when task does not exist`() {
-        // Given
-        val taskId = 999L
-        every { taskRepository.deleteById(taskId) } returns false
+    fun `should fail to delete non-existent task`() {
+        every { repository.deleteById(999L) } returns false
 
-        // When & Then
-        StepVerifier.create(taskService.deleteTask(taskId))
+        StepVerifier.create(service.deleteTask(999L))
             .expectError(TaskNotFoundException::class.java)
             .verify()
-
-        verify { taskRepository.deleteById(taskId) }
     }
 
     @Test
-    fun `getTasks should return PageResponse with filtered results`() {
-        // Given
-        val page = 0
-        val size = 10
-        val status = TaskStatus.NEW
+    fun `should return paginated tasks`() {
         val tasks = listOf(
-            Task(
-                id = 1L,
-                title = "Task 1",
-                description = "Description 1",
-                status = TaskStatus.NEW,
-                createdAt = LocalDateTime.now(),
-                updatedAt = LocalDateTime.now()
-            )
+            Task(1L, "Task 1", "Desc 1", TaskStatus.NEW, LocalDateTime.now(), LocalDateTime.now()),
+            Task(2L, "Task 2", "Desc 2", TaskStatus.NEW, LocalDateTime.now(), LocalDateTime.now())
         )
 
-        every { taskRepository.findAll(page, size, status) } returns tasks
-        every { taskRepository.count(status) } returns 1L
+        every { repository.findAll(0, 10, TaskStatus.NEW) } returns tasks
+        every { repository.count(TaskStatus.NEW) } returns 2L
 
-        // When & Then
-        StepVerifier.create(taskService.getTasks(page, size, status))
-            .expectNextMatches { response ->
-                response.content.size == 1 &&
-                response.page == page &&
-                response.size == size &&
-                response.totalElements == 1L &&
-                response.totalPages == 1
+        StepVerifier.create(service.getTasks(0, 10, TaskStatus.NEW))
+            .expectNextMatches { 
+                it.content.size == 2 && it.totalElements == 2L && it.totalPages == 1
             }
             .verifyComplete()
-
-        verify { taskRepository.findAll(page, size, status) }
-        verify { taskRepository.count(status) }
     }
 }

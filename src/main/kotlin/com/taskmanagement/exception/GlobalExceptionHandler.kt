@@ -10,26 +10,24 @@ import org.springframework.web.bind.annotation.RestControllerAdvice
 class GlobalExceptionHandler {
 
     @ExceptionHandler(TaskNotFoundException::class)
-    fun handleTaskNotFound(ex: TaskNotFoundException): ResponseEntity<ErrorResponse> {
-        return ResponseEntity
-            .status(HttpStatus.NOT_FOUND)
-            .body(ErrorResponse(ex.message ?: "Task not found"))
+    fun handleNotFound(ex: TaskNotFoundException): ResponseEntity<ErrorResponse> {
+        return ResponseEntity.notFound().build()
     }
 
     @ExceptionHandler(MethodArgumentNotValidException::class)
-    fun handleValidationErrors(ex: MethodArgumentNotValidException): ResponseEntity<ErrorResponse> {
-        val errors = ex.bindingResult.fieldErrors.map { "${it.field}: ${it.defaultMessage}" }
-        return ResponseEntity
-            .status(HttpStatus.BAD_REQUEST)
-            .body(ErrorResponse("Validation failed: ${errors.joinToString(", ")}"))
+    fun handleValidation(ex: MethodArgumentNotValidException): ResponseEntity<ErrorResponse> {
+        val message = ex.bindingResult.fieldErrors
+            .joinToString(", ") { "${it.field}: ${it.defaultMessage}" }
+        
+        return ResponseEntity.badRequest()
+            .body(ErrorResponse(message))
     }
 
     @ExceptionHandler(Exception::class)
     fun handleGeneral(ex: Exception): ResponseEntity<ErrorResponse> {
-        return ResponseEntity
-            .status(HttpStatus.INTERNAL_SERVER_ERROR)
-            .body(ErrorResponse("Internal server error"))
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+            .body(ErrorResponse("Something went wrong"))
     }
-
-    data class ErrorResponse(val message: String)
 }
+
+data class ErrorResponse(val message: String)
